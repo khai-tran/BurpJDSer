@@ -13,7 +13,7 @@ BurpJDSer is a Burp plugin that will deserialze/serialize Java request and respo
 - What to search: hardcoded password, SQL string, SSN, Credit card, etc.
 
 #3 Start Burp plugin
-java -Djava.io.tmpdir=<tmp_folder> -classpath burpsuite_pro_v1.4.07.jar;burpjdser.jar;xstream-1.4.2.jar;<client_jar> burp.StartBurp 
+java -Djava.io.tmpdir=[tmp_folder] -classpath burp.jar;burpjdser.jar;xstream-1.4.2.jar;[client_jar] burp.StartBurp 
 
 #4 Inspect proxy history for serialized Java traffic
 - Right-click on proxy item --> deserialize Java
