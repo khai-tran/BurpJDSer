@@ -8,7 +8,7 @@ public class SerializeMenuItem implements IMenuItemHandler {
 		try {
 			for (int i = 0; i < messageInfo.length; i++) {
 				IHttpRequestResponse iHttpRequestResponse = messageInfo[i];
-				Utilities.findAndSerializeProxyFile(iHttpRequestResponse);
+				Utilities.findAndSerializeProxyFile(iHttpRequestResponse.getResponse());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

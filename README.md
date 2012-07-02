@@ -15,16 +15,15 @@ BurpJDSer is a Burp plugin that will deserialze/serialize Java request and respo
 #3 Start Burp plugin
 java -Djava.io.tmpdir=[tmp_folder] -classpath burp.jar;burpjdser.jar;xstream-1.4.2.jar;[client_jar] burp.StartBurp 
 
-#4 Inspect proxy history for serialized Java traffic
-- Right-click on proxy item --> deserialize Java
-- Click on proxy item again, request/response will be deserialized to xml. Burp will also send deserialized request to Repeater and Intruder
+#4 Inspect serialized Java traffic
+- Serialized Java request/response will be automatically converted to XML. Decoded XML should be in "Edited Request" and "Original Response" tabs.
 - Fuzz the request using Repeater/Intruder. Request will be automatically serialized back to binary format and response will be deserialized in XML format
 
-*** Notes: Sometimes the client rely on server for authorization check. In case you may want to modify the serialized response to bypass it:
+#5: Bypass client-side authorization:
+Sometimes the client rely on server for authorization check. In case you may want to modify the serialized response to bypass it:
 - Inspect proxy response for possible authorization check
-- Right-click and deserialize suspected proxy item
 - Watch the console for the latest entry:
-*** DESERMENU *** Found serialized response file: x . Deserializing...
+*** DESER *** Found serialized response at Burp file: x . Deserializing...
 - Go to the <tmp_folder>, find the response corresponding to the proxy item x
 - Edit XML response (turn 'false' to 'true')
 - Right-click on the proxy item again --> serialize java
