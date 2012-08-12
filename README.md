@@ -22,10 +22,4 @@ java -Djava.io.tmpdir=[tmp_folder] -classpath burp.jar;burpjdser.jar;xstream-1.4
 #5: Bypass client-side authorization:
 Sometimes the client rely on server for authorization check. In case you may want to modify the serialized response to bypass it:
 - Inspect proxy response for possible authorization check
-- Watch the console for the latest entry:
-*** DESER *** Found serialized response at Burp file: x . Deserializing...
-- Go to the <tmp_folder>, find the response corresponding to the proxy item x
-- Edit XML response (turn 'false' to 'true')
-- Right-click on the proxy item again --> serialize java
-- In <tmp_folder> there should be a file call x.ser
-- Intercept response again. Right-click --> paste from file --> x.ser
+- Modify potentially abusive parameter to bypass client-side restrictions
