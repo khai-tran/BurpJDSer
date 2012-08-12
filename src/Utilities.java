@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,10 +22,12 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 
 public class Utilities {
 	static final String X_BURP_DESERIALIZED = "X-Burp: Deserialized";
+	static final String X_BURP_INITDESERIALIZED = "X-Burp: InitDeserialized";
+
 	static final String X_BURP_SERIALIZED = "X-Burp: Serialized";
 	static XStream xstream = new XStream(new DomDriver());
-	static String linebreak = "\\r\\n\\r\\n";
-	static String lineSeperator = System.getProperty("line.separator");
+	static String DOUBLELINEBREAK = "\\r\\n\\r\\n";
+	static String LINESEPARATOR = System.getProperty("line.separator");
 
 	public static String findAndDeserializeProxyFile(IHttpRequestResponse item) {
 		File burpFolder = Utilities.getBurpFolder();
@@ -43,12 +46,12 @@ public class Utilities {
 					System.out.println("*** DESERMENU *** Found serialized request file: " + historyItem + " . Deserializing...");
 					System.out.println("*** DESERMENU *** Found serialized response file: " + (Integer.valueOf(historyItem) + 1) + " . Deserializing...");
 					byte[] strMessage = Utilities.readFile(reqFile);
-					String reqXml = Utilities.deserializeProxyItem(strMessage);
+					byte[] reqXml = Utilities.deserializeProxyItem(strMessage);
 					Utilities.writeToFile(reqFile, new String(reqXml));
 					strMessage = Utilities.readFile(respFile);
-					String respXml = Utilities.deserializeProxyItem(strMessage);
+					byte[] respXml = Utilities.deserializeProxyItem(strMessage);
 					Utilities.writeToFile(respFile, new String(respXml));
-					return reqXml;
+					return new String(reqXml);
 				}
 
 			}
@@ -57,21 +60,22 @@ public class Utilities {
 		}
 		return "sth went wrong";
 	}
-		
-public static  String findBurpFile(byte[] msg) throws IOException{
-	File burpFolder = Utilities.getBurpFolder();
-	List<String> historyItems = new ArrayList<String>();
-	Collections.addAll(historyItems, burpFolder.list());
-	Collections.sort(historyItems);
-	for (String historyItem : historyItems) {
-		String respFile = burpFolder + File.separator + historyItem;
-		if (Arrays.equals(msg, readFile(respFile))) {
-			return respFile;
+
+	public static String findBurpFile(byte[] msg) throws IOException {
+		File burpFolder = Utilities.getBurpFolder();
+		List<String> historyItems = new ArrayList<String>();
+		Collections.addAll(historyItems, burpFolder.list());
+		Collections.sort(historyItems);
+		for (String historyItem : historyItems) {
+			String respFile = burpFolder + File.separator + historyItem;
+			if (Arrays.equals(msg, readFile(respFile))) {
+				return respFile;
 			}
 		}
-	return "Not found";
-}
-	public static void findAndSerializeProxyFile( byte[] resp) {
+		return "Not found";
+	}
+
+	public static void findAndSerializeProxyFile(byte[] resp) {
 		File burpFolder = Utilities.getBurpFolder();
 		List<String> historyItems = new ArrayList<String>();
 		Collections.addAll(historyItems, burpFolder.list());
@@ -124,16 +128,38 @@ public static  String findBurpFile(byte[] msg) throws IOException{
 		return ret;
 	}
 
-	public static String deserializeProxyItem(byte[] message) throws Exception {
+	public static byte[] initDeserializeProxyItem(byte[] message) {
+		try {
 			String testStr = new String(message);
-			String[] strHeadersAndContent = testStr.split(linebreak);
+			String[] strHeadersAndContent = testStr.split(DOUBLELINEBREAK);
 			byte[] byteOrigMessageContent = Arrays.copyOfRange(message, strHeadersAndContent[0].length() + 4, message.length);
 			ByteArrayInputStream in = new ByteArrayInputStream(byteOrigMessageContent);
 			ObjectInputStream i;
 			i = new ObjectInputStream(in);
 			Object obj = i.readObject();
 			String xml = xstream.toXML(obj);
-			return (strHeadersAndContent[0] + lineSeperator+ X_BURP_DESERIALIZED+ lineSeperator + lineSeperator + xml);
+			String headerWithUpdatedLength = strHeadersAndContent[0].replaceAll("Content-Length: .*", "Content-Length: " + String.valueOf(xml.length()));
+			return (headerWithUpdatedLength + LINESEPARATOR + X_BURP_INITDESERIALIZED + LINESEPARATOR + LINESEPARATOR + xml).getBytes();
+		} catch (Exception e) {
+			return message;
+		}
+	}
+
+	public static byte[] deserializeProxyItem(byte[] message) {
+		try {
+			String testStr = new String(message);
+			String[] strHeadersAndContent = testStr.split(DOUBLELINEBREAK);
+			byte[] byteOrigMessageContent = Arrays.copyOfRange(message, strHeadersAndContent[0].length() + 4, message.length);
+			ByteArrayInputStream in = new ByteArrayInputStream(byteOrigMessageContent);
+			ObjectInputStream i;
+			i = new ObjectInputStream(in);
+			Object obj = i.readObject();
+			String xml = xstream.toXML(obj);
+			String headerWithUpdatedLength = strHeadersAndContent[0].replaceAll("Content-Length: .*", "Content-Length: " + String.valueOf(xml.length()));
+			return (headerWithUpdatedLength + LINESEPARATOR + X_BURP_DESERIALIZED + LINESEPARATOR + LINESEPARATOR + xml).getBytes();
+		} catch (Exception e) {
+			return message;
+		}
 	}
 
 	public static void print(String str) {
@@ -151,26 +177,37 @@ public static  String findBurpFile(byte[] msg) throws IOException{
 			System.out.println(str[i]);
 	}
 
-	public static byte[] serializeProxyItem(byte[] message) throws Exception{
+	public static byte[] serializeProxyItem(byte[] message) {
+
+		try {
 			String strMessage = new String(message);
-			String[] strHeadersAndContent = strMessage.split(linebreak);
+			String[] strHeadersAndContent = strMessage.split(DOUBLELINEBREAK);
 			Object xml = xstream.fromXML(strHeadersAndContent[1]);
 			ByteArrayOutputStream bStream = new ByteArrayOutputStream();
 			ObjectOutputStream oStream = new ObjectOutputStream(bStream);
 			oStream.writeObject(xml);
 			byte[] content = bStream.toByteArray();
-			byte[] header = (strHeadersAndContent[0] + lineSeperator+X_BURP_SERIALIZED+ lineSeperator + lineSeperator).getBytes();
+			String headerWithUpdatedLength = strHeadersAndContent[0].replaceAll("Content-Length: .*", "Content-Length: " + String.valueOf(content.length));
+			byte[] header = (headerWithUpdatedLength + LINESEPARATOR + X_BURP_SERIALIZED + LINESEPARATOR + LINESEPARATOR).getBytes();
 			byte[] retArray = new byte[header.length + content.length];
 			System.arraycopy(header, 0, retArray, 0, header.length);
 			System.arraycopy(content, 0, retArray, header.length, content.length);
+			// print(retArray);
 			return retArray;
+		} catch (Exception e) {
+			return message;
+		}
 
+	}
+
+	private static void print(byte[] header) {
+		System.out.println(new String(header));
 	}
 
 	public static Object serializeFromXml(byte[] message) {
 		try {
 			String strMessage = new String(message);
-			String[] strHeadersAndContent = strMessage.split(linebreak);
+			String[] strHeadersAndContent = strMessage.split(DOUBLELINEBREAK);
 			Object xml = xstream.fromXML(strHeadersAndContent[1]);
 			return xml;
 		} catch (Exception e) {
@@ -178,5 +215,9 @@ public static  String findBurpFile(byte[] msg) throws IOException{
 			return "sth went wrong".getBytes();
 		}
 
+	}
+
+	public static void print(URL url) {
+		System.out.println(url.getPath());
 	}
 }

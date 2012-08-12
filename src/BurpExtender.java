@@ -13,27 +13,31 @@ public class BurpExtender implements IBurpExtender {
 			String httpMethod, String url, String resourceType, String statusCode, String responseContentType, byte[] message, int[] action) {
 		try {
 			if (messageIsRequest) {
-				byte[] deserReq = Utilities.deserializeProxyItem(message).getBytes();
+				if (!"POST".equals(httpMethod))
+					return message;
+				byte[] deserReq = Utilities.deserializeProxyItem(message);
 				return deserReq;
 			} else {
 				String resp = new String(message);
+				if (resp.contains(Utilities.X_BURP_INITDESERIALIZED)) {
+					action[0] = ACTION_FOLLOW_RULES_AND_REHOOK;
+					return resp.replaceAll(Utilities.X_BURP_INITDESERIALIZED, Utilities.X_BURP_DESERIALIZED).getBytes();
+				}
 				if (resp.contains(Utilities.X_BURP_DESERIALIZED)) {
-					resp.replace(Utilities.X_BURP_DESERIALIZED, "");
-					Utilities.print("*** DESER *** Found serialized response at Burp file: " + Utilities.findBurpFile(message) + " . Deserialzing...");
 					return Utilities.serializeProxyItem(message);
 				}
 				return message;
 			}
 		} catch (Exception e) {
+			Utilities.print(e.getMessage());
 			return message;
 		}
 	}
 
 	public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
 		mCallbacks = callbacks;
-		// mCallbacks.registerMenuItem("deserialize Java", new
-		// DSerializeMenuItem());
-		mCallbacks.registerMenuItem("serialize Java", new SerializeMenuItem());
+		// mCallbacks.registerMenuItem("Serialize Java", new
+		// SerializeMenuItem());
 	}
 
 	public void setCommandLineArgs(String[] args) {
@@ -41,28 +45,42 @@ public class BurpExtender implements IBurpExtender {
 
 	public void processHttpMessage(String toolName, boolean messageIsRequest, IHttpRequestResponse messageInfo) {
 		try {
-			if ("Repeater".equals(toolName) || "Intruder".equals(toolName)) {
+			String url = messageInfo.getUrl().getPath();
+			String lowerCaseToolName = toolName.toLowerCase();
+			if ("repeater".equals(lowerCaseToolName) || "intruder".equals(lowerCaseToolName)) {
 				if (messageIsRequest) {
 					byte[] xml = Utilities.serializeProxyItem(messageInfo.getRequest());
 					messageInfo.setRequest(xml);
 				} else {
-					String xml = Utilities.deserializeProxyItem(messageInfo.getResponse());
-					messageInfo.setResponse(xml.getBytes());
+					byte[] xml = Utilities.deserializeProxyItem(messageInfo.getResponse());
+					messageInfo.setResponse(xml);
 				}
-			} else if ("Proxy".equals(toolName)) {
+			} else if ("proxy".equals(lowerCaseToolName)) {
 				if (messageIsRequest) {
 					byte[] byteReq = messageInfo.getRequest();
-					String request = new String(byteReq);
-					if (request.contains(Utilities.X_BURP_DESERIALIZED))
-						messageInfo.setRequest(Utilities.serializeProxyItem(byteReq));
+					try {
+						byte[] modReq = Utilities.serializeProxyItem(byteReq);
+						messageInfo.setRequest(modReq);
+					} catch (Exception e) {
+						Utilities.print(e.getMessage());
+					}
 				} else {
 					byte[] byteResp = messageInfo.getResponse();
-					messageInfo.setResponse(Utilities.deserializeProxyItem(byteResp).getBytes());
+					try {
+						byte[] modResp = Utilities.initDeserializeProxyItem(byteResp);
+						messageInfo.setResponse(modResp);
+					} catch (Exception e) {
+						Utilities.print(e.getMessage());
+					}
 				}
-
 			}
+
 		} catch (Exception e) {
-			// e.printStackTrace();
+			try {
+				Utilities.print(">>>>>Tool: " + toolName + " URL: " + messageInfo.getUrl().getPath() + " . Reason: " + e.getMessage());
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
 
 		}
 
