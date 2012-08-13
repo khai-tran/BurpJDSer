@@ -29,105 +29,6 @@ public class Utilities {
 	static String DOUBLELINEBREAK = "\\r\\n\\r\\n";
 	static String LINESEPARATOR = System.getProperty("line.separator");
 
-	public static String findAndDeserializeProxyFile(IHttpRequestResponse item) {
-		File burpFolder = Utilities.getBurpFolder();
-		List<String> historyItems = new ArrayList<String>();
-		Collections.addAll(historyItems, burpFolder.list());
-		Collections.sort(historyItems);
-		try {
-
-			for (String historyItem : historyItems) {
-				if (historyItem.contains(".ser"))
-					continue;
-				String reqFile = burpFolder + File.separator + historyItem;
-				String respFile = burpFolder + File.separator + (Integer.valueOf(historyItem) + 1);
-
-				if (Arrays.equals(item.getRequest(), readFile(reqFile)) && Arrays.equals(item.getResponse(), readFile(respFile))) {
-					System.out.println("*** DESERMENU *** Found serialized request file: " + historyItem + " . Deserializing...");
-					System.out.println("*** DESERMENU *** Found serialized response file: " + (Integer.valueOf(historyItem) + 1) + " . Deserializing...");
-					byte[] strMessage = Utilities.readFile(reqFile);
-					byte[] reqXml = Utilities.deserializeProxyItem(strMessage);
-					Utilities.writeToFile(reqFile, new String(reqXml));
-					strMessage = Utilities.readFile(respFile);
-					byte[] respXml = Utilities.deserializeProxyItem(strMessage);
-					Utilities.writeToFile(respFile, new String(respXml));
-					return new String(reqXml);
-				}
-
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return "sth went wrong";
-	}
-
-	public static String findBurpFile(byte[] msg) throws IOException {
-		File burpFolder = Utilities.getBurpFolder();
-		List<String> historyItems = new ArrayList<String>();
-		Collections.addAll(historyItems, burpFolder.list());
-		Collections.sort(historyItems);
-		for (String historyItem : historyItems) {
-			String respFile = burpFolder + File.separator + historyItem;
-			if (Arrays.equals(msg, readFile(respFile))) {
-				return respFile;
-			}
-		}
-		return "Not found";
-	}
-
-	public static void findAndSerializeProxyFile(byte[] resp) {
-		File burpFolder = Utilities.getBurpFolder();
-		List<String> historyItems = new ArrayList<String>();
-		Collections.addAll(historyItems, burpFolder.list());
-		Collections.sort(historyItems);
-		try {
-			for (String historyItem : historyItems) {
-				String respFile = burpFolder + File.separator + historyItem;
-				if (Arrays.equals(resp, readFile(respFile))) {
-					System.out.println("*** SERMENU *** Found deserialized response file: " + historyItem + " . Serializing...");
-					byte[] strMessage = Utilities.readFile(respFile);
-					Object xml = Utilities.serializeFromXml(strMessage);
-					Utilities.writeToFile(respFile + ".ser", xml);
-					break;
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public static File getBurpFolder() {
-		File tmp = new File(System.getProperty("java.io.tmpdir"));
-		List<String> candidates = new ArrayList<String>();
-		for (String candidate : tmp.list())
-			if (candidate.contains("burp"))
-				candidates.add(candidate);
-		Collections.sort(candidates);
-		return new File(tmp + File.separator + candidates.get(candidates.size() - 1));
-	}
-
-	public static void writeToFile(String filePath, String content) throws IOException {
-		FileWriter fstream = new FileWriter(filePath);
-		BufferedWriter out = new BufferedWriter(fstream);
-		out.write(content);
-		out.close();
-	}
-
-	public static void writeToFile(String filePath, Object content) throws IOException {
-		FileOutputStream f = new FileOutputStream(filePath);
-		ObjectOutput s = new ObjectOutputStream(f);
-		s.writeObject(content);
-		s.flush();
-	}
-
-	static byte[] readFile(String fileName) throws IOException {
-		File file = new File(fileName);
-		FileInputStream fin = new FileInputStream(file);
-		byte[] ret = new byte[(int) file.length()];
-		fin.read(ret);
-		return ret;
-	}
-
 	public static byte[] initDeserializeProxyItem(byte[] message) {
 		try {
 			String testStr = new String(message);
@@ -200,7 +101,7 @@ public class Utilities {
 
 	}
 
-	private static void print(byte[] header) {
+	public static void print(byte[] header) {
 		System.out.println(new String(header));
 	}
 

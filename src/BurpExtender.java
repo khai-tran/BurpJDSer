@@ -36,8 +36,6 @@ public class BurpExtender implements IBurpExtender {
 
 	public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
 		mCallbacks = callbacks;
-		// mCallbacks.registerMenuItem("Serialize Java", new
-		// SerializeMenuItem());
 	}
 
 	public void setCommandLineArgs(String[] args) {
@@ -47,7 +45,9 @@ public class BurpExtender implements IBurpExtender {
 		try {
 			String url = messageInfo.getUrl().getPath();
 			String lowerCaseToolName = toolName.toLowerCase();
-			if ("repeater".equals(lowerCaseToolName) || "intruder".equals(lowerCaseToolName)) {
+			if ("scanner".equals(lowerCaseToolName) && messageIsRequest)
+				Utilities.print(messageInfo.getRequest());
+			if ("repeater".equals(lowerCaseToolName) || "intruder".equals(lowerCaseToolName) || "scanner".equals(lowerCaseToolName)) {
 				if (messageIsRequest) {
 					byte[] xml = Utilities.serializeProxyItem(messageInfo.getRequest());
 					messageInfo.setRequest(xml);
@@ -83,7 +83,6 @@ public class BurpExtender implements IBurpExtender {
 			}
 
 		}
-
 	}
 
 	public void newScanIssue(IScanIssue issue) {
