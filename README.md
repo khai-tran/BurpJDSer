@@ -14,6 +14,7 @@ BurpJDSer is a Burp plugin that will deserialze/serialize Java request and respo
 ##3 Start Burp plugin
     java -classpath burp.jar;burpjdser.jar;xstream-1.4.2.jar;[client_jar] burp.StartBurp 
 *** Note: in case there're multiple jars, copy them all into a folder and use this to start Burp:
+    
     java -classpath burp.jar;burpjdser.jar;xstream-1.4.2.jar;"[Absolute path to jars folder]"/* burp.StartBurp 
 
 ##4 Inspect serialized Java traffic
